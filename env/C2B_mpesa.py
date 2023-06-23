@@ -34,7 +34,7 @@ def initiate_payment(phone_number: str, amount: float):
     #live
     # url = "https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
 
-    url = 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
+    url = f'https://{mpesa_environment}.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
     headers = {
         'Authorization': f'Bearer {get_access_token(url)}',
         'Content-Type': 'application/json'
