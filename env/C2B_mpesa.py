@@ -7,19 +7,21 @@ import json
 
 config = configparser.ConfigParser()
 # Replace 'path' with the actual path to your config file
-config.read('env/mysettings.ini')  
+config.read('/home/grrhrwh/Documents/GitHub/mpesa_integrations/env/mysetting.ini')  
 
 # allocating global variables
 
-mpesa_environment = config.get('section_name', 'MPESA_ENVIRINMENT')
-mpesa_consumer_key = config.get('section_name', 'MPESA_CONSUMER_KEY') 
-mpesa_consumer_secret = config.get('section_name', 'MPESA_CONSUMER_SECRET')
-nmm_phone_number = config.get('section_name', 'NMM_PHONE_NUMBER')
-mpesa_passkey = config.get('section_name', 'MPESA_PASSKEY')
-mpesa_express_shortcode = config.get('section_name', 'MPESA_EXPRESS_SHORTCODE')
+mpesa_environment = config.get('mpesa_details', 'MPESA_ENVIRINMENT')
+mpesa_consumer_key = config.get('mpesa_details', 'MPESA_CONSUMER_KEY') 
+mpesa_consumer_secret = config.get('mpesa_details', 'MPESA_CONSUMER_SECRET')
+nmm_phone_number = config.get('mpesa_details', 'NMM_PHONE_NUMBER')
+mpesa_passkey = config.get('mpesa_details', 'MPESA_PASSKEY')
+mpesa_express_shortcode = config.get('mpesa_details', 'MPESA_EXPRESS_SHORTCODE')
+
+mpesa_basic_authorization = config.get('mpesa_details', 'MPESA_BASIC_AUTHORIZATION')
 
 # the callback url should point to the function handling it
-mpesa_callback_url = config.get('section_name', 'MPESA_CALLBACK_URL')
+mpesa_callback_url = config.get('mpesa_details', 'MPESA_CALLBACK_URL')
 
 
 def initiate_payment(phone_number: str, amount: float):
@@ -35,10 +37,10 @@ def initiate_payment(phone_number: str, amount: float):
     """
     #live
     # url = "https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
-    print(mpesa_environment)
+    token  = get_access_token()
     url = f'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
     headers = {
-        'Authorization': f'Bearer {get_access_token(url)}',
+        'Authorization': f'Bearer'+token,
         'Content-Type': 'application/json'
     }
     payload = {
@@ -62,7 +64,7 @@ def initiate_payment(phone_number: str, amount: float):
     return response.json()
 
 
-def get_access_token(url:str):
+def get_access_token():
     """
     Implement the logic to obtain the access token from the Daraja API
     This function will handle the authentication process and return the access token
@@ -74,24 +76,25 @@ def get_access_token(url:str):
     Returns:
         HTTP: result access token 
     """
+    credential_url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
     try:
         
         encoded_credentials = base64.b64encode(f"{mpesa_consumer_key}:{mpesa_consumer_secret}".encode()).decode()
 
         
         headers = {
-            "Authorization": f"Basic {encoded_credentials}",
+            "Authorization": f"Basic Auth{mpesa_basic_authorization}",
             "Content-Type": "application/json"
         }
 
         # Send the request and parse the response
-        response = requests.get(url, headers=headers).json()
-
+        response = requests.get(credential_url,headers=headers).json()
+        print(response)
         # Check for errors and return the access token
         if "access_token" in response:
             return response["access_token"]
         else:
-            raise Exception("Failed to get access token: " + response["error_description"])
+            print("access denied")
     except Exception as e:
         raise Exception("Failed to get access token: " + str(e)) 
 
