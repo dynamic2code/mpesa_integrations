@@ -7,7 +7,7 @@ import json
 
 config = configparser.ConfigParser()
 # Replace 'path' with the actual path to your config file
-config.read('env/settings.ini')  
+config.read('env/mysettings.ini')  
 
 # allocating global variables
 
@@ -17,12 +17,14 @@ mpesa_consumer_secret = config.get('section_name', 'MPESA_CONSUMER_SECRET')
 nmm_phone_number = config.get('section_name', 'NMM_PHONE_NUMBER')
 mpesa_passkey = config.get('section_name', 'MPESA_PASSKEY')
 mpesa_express_shortcode = config.get('section_name', 'MPESA_EXPRESS_SHORTCODE')
+
+# the callback url should point to the function handling it
 mpesa_callback_url = config.get('section_name', 'MPESA_CALLBACK_URL')
 
 
 def initiate_payment(phone_number: str, amount: float):
     """
-    the main function
+    the main function, sends the stk push
 
     Args:
         phone_number (_type_): _description_
@@ -33,8 +35,8 @@ def initiate_payment(phone_number: str, amount: float):
     """
     #live
     # url = "https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
-
-    url = f'https://{mpesa_environment}.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
+    print(mpesa_environment)
+    url = f'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
     headers = {
         'Authorization': f'Bearer {get_access_token(url)}',
         'Content-Type': 'application/json'
@@ -53,6 +55,10 @@ def initiate_payment(phone_number: str, amount: float):
         'TransactionDesc': 'Trip Payment'
     }
     response = requests.post(url, json=payload, headers=headers)
+    if response:
+        print(response)
+    else:
+        print("not")
     return response.json()
 
 
@@ -96,6 +102,7 @@ def generate_password():
 
     """
     stk_password = base64.b64encode((mpesa_express_shortcode + mpesa_consumer_key + get_timestamp()).encode()).decode()
+    return stk_password
 
 def get_timestamp():
     """
@@ -109,3 +116,34 @@ def get_timestamp():
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     return timestamp
 
+
+def handle_callback():
+    callback_data = requests.json
+
+    # Check the result code
+    result_code = callback_data['Body']['stkCallback']['ResultCode']
+    if result_code != 0:
+        # If the result code is not 0, there was an error
+        error_message = callback_data['Body']['stkCallback']['ResultDesc']
+        response_data = {'ResultCode': result_code, 'ResultDesc': error_message}
+        return json(response_data)
+
+    # If the result code is 0, the transaction was completed
+    callback_metadata = callback_data['Body']['stkCallback']['CallbackMetadata']
+    amount = None
+    phone_number = None
+    for item in callback_metadata['Item']:
+        if item['Name'] == 'Amount':
+            amount = item['Value']
+        elif item['Name'] == 'PhoneNumber':
+            phone_number = item['Value']
+
+    # Save the variables to a file or database, etc.
+    # ...
+
+    # Return a success response to the M-Pesa server
+    response_data = {'ResultCode': result_code, 'ResultDesc': 'Success'}
+    print (response_data)
+    return json(response_data)
+
+initiate_payment('0113283165', 20)
