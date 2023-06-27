@@ -2,6 +2,7 @@ import requests
 import configparser
 import base64
 from datetime import datetime
+from requests.auth import HTTPBasicAuth
 import json
 
 
@@ -23,6 +24,25 @@ mpesa_basic_authorization = config.get('mpesa_details', 'MPESA_BASIC_AUTHORIZATI
 # the callback url should point to the function handling it
 mpesa_callback_url = config.get('mpesa_details', 'MPESA_CALLBACK_URL')
 
+def get_api_auth():
+    """
+    Implement the logic to obtain the access token from the Daraja API
+    This function will handle the authentication process and return the access token
+
+    Raises:
+        Exception: _description_
+        Exception: _description_
+
+    Returns:
+        HTTP: result access token 
+    """
+    auth_url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
+
+        # make a get request using python requests library
+    r = requests.get(auth_url, auth=HTTPBasicAuth(mpesa_consumer_key, mpesa_consumer_secret))
+
+    # return access_token from response
+    return r.json()['access_token']
 
 def initiate_payment(phone_number: str, amount: float):
     """
@@ -37,7 +57,7 @@ def initiate_payment(phone_number: str, amount: float):
     """
     #live
     # url = "https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
-    token  = get_access_token()
+    token  = get_api_auth()
     url = f'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
     headers = {
         'Authorization': f'Bearer'+token,
@@ -62,41 +82,6 @@ def initiate_payment(phone_number: str, amount: float):
     else:
         print("not")
     return response.json()
-
-
-def get_access_token():
-    """
-    Implement the logic to obtain the access token from the Daraja API
-    This function will handle the authentication process and return the access token
-
-    Raises:
-        Exception: _description_
-        Exception: _description_
-
-    Returns:
-        HTTP: result access token 
-    """
-    credential_url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
-    try:
-        
-        encoded_credentials = base64.b64encode(f"{mpesa_consumer_key}:{mpesa_consumer_secret}".encode()).decode()
-
-        
-        headers = {
-            "Authorization": f"Basic Auth{mpesa_basic_authorization}",
-            "Content-Type": "application/json"
-        }
-
-        # Send the request and parse the response
-        response = requests.get(credential_url,headers=headers).json()
-        print(response)
-        # Check for errors and return the access token
-        if "access_token" in response:
-            return response["access_token"]
-        else:
-            print("access denied")
-    except Exception as e:
-        raise Exception("Failed to get access token: " + str(e)) 
 
 def generate_password():
     """
@@ -149,4 +134,4 @@ def handle_callback():
     print (response_data)
     return json(response_data)
 
-initiate_payment('0113283165', 20)
+
